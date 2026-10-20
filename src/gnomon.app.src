@@ -1,0 +1,17 @@
+{application, gnomon, [
+    {description, "HTTP Date header value served from a persistent term instead of an ETS table"},
+    {vsn, "1.0.0"},
+    {mod, {gnomon_app, []}},
+    {registered, [gnomon_sup, gnomon_clock]},
+    {applications, [
+        kernel,
+        stdlib
+    ]},
+    {env, []},
+    {modules, []},
+    {licenses, ["Apache-2.0"]},
+    {links, [
+        {"GitHub", "https://github.com/ninefx/gnomon"},
+        {"Changelog", "https://github.com/ninefx/gnomon/blob/main/CHANGELOG.md"}
+    ]}
+]}.

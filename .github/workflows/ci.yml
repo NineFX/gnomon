@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: OTP ${{ matrix.otp }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        otp: ['27', '28', '29']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        id: beam
+        with:
+          otp-version: ${{ matrix.otp }}
+          rebar3-version: '3.27'
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/rebar3
+            _build
+          key: ${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-rebar3-${{ steps.beam.outputs.rebar3-version }}-${{ hashFiles('rebar.config') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ steps.beam.outputs.otp-version }}-rebar3-${{ steps.beam.outputs.rebar3-version }}-
+      - run: rebar3 compile
+      - run: rebar3 xref
+      - run: rebar3 dialyzer
+      - run: rebar3 eunit
+      - run: rebar3 proper -n 2000
+
+  format:
+    name: erlfmt
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: '29'
+          rebar3-version: '3.27'
+      - run: rebar3 fmt --check
+
+  bench:
+    name: Bench harness smoke test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: '29'
+          rebar3-version: '3.27'
+      - name: Run the harness in quick mode
+        run: bench/run.sh quick
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          otp-version: '29'
+          rebar3-version: '3.27'
+      - run: rebar3 ex_doc
+      - name: Hex package builds
+        run: rebar3 hex build
