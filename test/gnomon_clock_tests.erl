@@ -144,6 +144,13 @@ stop_app(_) ->
     ok = logger:unset_module_level([supervisor, application_controller]),
     gnomon:clear().
 
+%% CI has no 32-bit emulator, so the decision is tested by word size.
+clock_runs_only_on_64_bit_test() ->
+    Children = gnomon_sup:children(8),
+    ?assertMatch([#{id := gnomon_clock, shutdown := 5000}], Children),
+    ?assertEqual(ok, supervisor:check_childspecs(Children)),
+    ?assertEqual([], gnomon_sup:children(4)).
+
 app_file_test() ->
     _ = application:load(gnomon),
     ?assertEqual({ok, {gnomon_app, []}}, application:get_key(gnomon, mod)),

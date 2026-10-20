@@ -1,5 +1,6 @@
 %% @doc Worker that refreshes the {@link gnomon} persistent term once per
-%% second. The `gnomon' application supervises one per node.
+%% second. The `gnomon' application supervises one per node on 64-bit
+%% emulators.
 %%
 %% It traps exits so `terminate/2' erases the value on shutdown; a
 %% persistent term outlives its writer, and a stale one is silently wrong.
@@ -36,7 +37,6 @@ start_link() ->
 -spec init([]) -> {ok, state()}.
 init([]) ->
     _ = process_flag(trap_exit, true),
-    ok = warn_if_32_bit(),
     {Mono, Ms} = now_ms(),
     ok = gnomon:update(),
     {ok, #{timer => schedule(Mono, Ms)}}.
@@ -70,22 +70,6 @@ terminate(_Reason, _State) ->
 -spec code_change(term(), state(), term()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
-%% On a 32-bit emulator small integers have 28 bits, so the 43-bit packed
-%% value is a bignum rather than an immediate and every update triggers
-%% the global GC pass this design exists to avoid. Output stays correct;
-%% say so once at startup.
--spec warn_if_32_bit() -> ok.
-warn_if_32_bit() ->
-    case erlang:system_info(wordsize) of
-        8 ->
-            ok;
-        _ ->
-            logger:warning(
-                "gnomon: 32-bit emulator; the packed date is not an immediate, "
-                "so each update triggers a global GC pass"
-            )
-    end.
 
 %% Both clocks are read before gnomon:update/0 runs. If a second boundary
 %% falls between this read and the update, the next tick is aimed at that

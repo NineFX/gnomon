@@ -23,7 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   worker per node, a `gen_server` that refreshes the value once per second
   on the system-clock second boundary and erases it on shutdown. The
   application's `stop/1` erases it as well, so the value never outlives
-  the application.
+  the application. On a 32-bit emulator no clock runs and each read
+  computes the date.
 - EUnit and PropEr tests, including a cross-check against cowlib's
   `cow_date:rfc7231/1`.
 - An erlperf benchmark against the real `cowboy_clock`, whose binary is

@@ -9,8 +9,9 @@
 %% persistent-term lookup and one small binary on the caller's heap.
 %%
 %% The `gnomon' application runs {@link gnomon_clock}, which keeps the
-%% value fresh. When it is not running, readers fall back to computing the
-%% date from the system clock, which is correct but slower.
+%% value fresh. When no clock is running, on a 32-bit emulator or outside
+%% the application, readers compute the date from the system clock, which
+%% is correct but slower.
 %%
 %% The packed layout, from the least significant bit:
 %% ```

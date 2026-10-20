@@ -46,8 +46,9 @@ date wherever the header is built:
 <<"Sun, 06 Nov 1994 08:49:37 GMT">>
 ```
 
-When the application is not running, `date/0` computes the date from the
-system clock. That is correct but slower.
+When no clock is running, `date/0` computes the date from the system
+clock, which is correct but slower: about 270 ns per read on an Apple M5
+against 11 to 15.
 
 `gnomon:format/1` formats any Unix time in years 0 through 9999 the same way,
 for `Last-Modified` and `Expires` style headers:
@@ -112,11 +113,11 @@ back to the system clock while the key is absent.
 
 ## Limits
 
-- 64-bit emulators only. On a 32-bit emulator, such as the 32-bit
-  Raspberry Pi OS, the packed value is a bignum rather than an immediate
-  and every update triggers a global GC pass. Output stays correct;
-  `gnomon_clock` logs a warning at startup, and the property test
-  `prop_pack_is_immediate` fails there on purpose.
+- The clock runs on 64-bit emulators only. On a 32-bit emulator, such as
+  the 32-bit Raspberry Pi OS, the packed value is a bignum rather than an
+  immediate, so the application starts no clock, logs a notice, and every
+  read computes the date from the system clock. The test suite assumes a
+  64-bit emulator.
 - Years 0 through 9999. `pack/1` and `format/1` fail with `function_clause`
   outside that range.
 - The year table covers 2000 through 2199. Other years take a slower path
