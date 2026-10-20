@@ -6,10 +6,8 @@ table.
 `gnomon` keeps the current
 [IMF-fixdate](https://www.rfc-editor.org/rfc/rfc9110#section-5.6.7)
 (`Sun, 06 Nov 1994 08:49:37 GMT`, always 29 bytes) packed into one small
-integer in a persistent term. A worker refreshes it once per second. Readers
-unpack the integer and assemble the binary from seven fixed-width integer
-segments taken from literal tables, so a read is one persistent-term lookup
-and one small binary on the caller's heap.
+integer in a persistent term, refreshed once per second. A read is one
+persistent-term lookup and one small binary on the caller's heap.
 
 ## Usage
 
