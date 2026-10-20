@@ -43,7 +43,7 @@ value_exists_after_start_link(Pid) ->
         ?assert(is_process_alive(Pid)),
         P = persistent_term:get(?KEY, undefined),
         ?assert(is_integer(P)),
-        ?assertEqual(0, erts_debug:flat_size(P)),
+        ?assert(prop_gnomon:immediate_iff_64_bit(P)),
         assert_served(fun gnomon:date/0)
     end.
 
@@ -123,14 +123,24 @@ second_start_is_refused_test() ->
 %%--------------------------------------------------------------------
 
 application_test_() ->
-    {foreach, fun start_app/0, fun stop_app/1, [
+    {foreach, fun start_app/0, fun stop_app/1, application_tests(erlang:system_info(wordsize))}.
+
+%% With 64-bit words the application supervises one clock.
+application_tests(8) ->
+    [
         fun app_serves_the_date/0,
         fun app_supervises_one_registered_clock/0,
         fun app_stop_erases_the_key/0,
         fun killed_clock_is_restarted_with_the_value/0,
         fun terminate_child_erases_and_restart_child_restores/0,
         fun clock_dying_past_intensity_stops_the_app_and_erases/0
-    ]}.
+    ];
+%% With 32-bit words it runs no clock and every read takes the fallback.
+application_tests(4) ->
+    [
+        fun app_runs_no_clock/0,
+        fun app_stops_without_a_clock/0
+    ].
 
 start_app() ->
     gnomon:clear(),
@@ -144,7 +154,7 @@ stop_app(_) ->
     ok = logger:unset_module_level([supervisor, application_controller]),
     gnomon:clear().
 
-%% CI has no 32-bit emulator, so the decision is tested by word size.
+%% Both word sizes' child lists, whatever emulator runs the suite.
 clock_runs_only_on_64_bit_test() ->
     Children = gnomon_sup:children(8),
     ?assertMatch([#{id := gnomon_clock, shutdown := 5000}], Children),
@@ -234,6 +244,19 @@ kill_clock_until_down(Ref, Sup, N) ->
     after 50 ->
         kill_clock_until_down(Ref, Sup, N - 1)
     end.
+
+app_runs_no_clock() ->
+    ?assert(is_pid(whereis(gnomon_sup))),
+    ?assertEqual([], supervisor:which_children(gnomon_sup)),
+    ?assertEqual(undefined, whereis(gnomon_clock)),
+    ?assertEqual(undefined, persistent_term:get(?KEY, undefined)),
+    assert_now(fun gnomon:date/0).
+
+app_stops_without_a_clock() ->
+    ok = application:stop(gnomon),
+    ?assertEqual(undefined, whereis(gnomon_sup)),
+    ?assertEqual(undefined, persistent_term:get(?KEY, undefined)),
+    assert_now(fun gnomon:date/0).
 
 %%--------------------------------------------------------------------
 %% Start order

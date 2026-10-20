@@ -1,12 +1,13 @@
 %% Property tests for gnomon, run with `rebar3 proper`.
 %%
 %% reference/1 is an independent formatter built on calendar and
-%% io_lib:format. It is exported so the EUnit modules can use it too.
+%% io_lib:format. It and immediate_iff_64_bit/1 are exported so the EUnit
+%% modules can use them too.
 -module(prop_gnomon).
 
 -include_lib("proper/include/proper.hrl").
 
--export([reference/1, unix_seconds/0]).
+-export([reference/1, unix_seconds/0, immediate_iff_64_bit/1]).
 
 %% 9999-12-31T23:59:59Z, the largest value pack/1 accepts.
 -define(MAX_SECONDS, 253402300799).
@@ -66,15 +67,11 @@ prop_date_matches_reference() ->
         end
     ).
 
-%% The packed value must be an immediate (fit in one machine word), or the
-%% once-per-second persistent_term:put/2 would trigger a global GC. This
-%% fails on a 32-bit emulator by design.
-prop_pack_is_immediate() ->
-    ?FORALL(
-        T,
-        unix_seconds(),
-        erts_debug:flat_size(gnomon:pack(T)) =:= 0
-    ).
+%% On 64-bit words the packed value is an immediate, so the once-per-second
+%% persistent_term:put/2 never triggers a global GC. On 32-bit words it is
+%% a bignum, which is why the application starts no clock there.
+prop_pack_is_immediate_iff_64_bit() ->
+    ?FORALL(T, unix_seconds(), immediate_iff_64_bit(gnomon:pack(T))).
 
 prop_pack_fits_in_43_bits() ->
     ?FORALL(
@@ -157,3 +154,15 @@ reference(T) ->
             [Wday, D, Month, Y, H, Mi, S]
         )
     ).
+
+%%--------------------------------------------------------------------
+%% Word size
+%%--------------------------------------------------------------------
+
+%% An immediate on 64-bit words, a bignum on 32-bit words.
+-spec immediate_iff_64_bit(integer()) -> boolean().
+immediate_iff_64_bit(P) ->
+    case erlang:system_info(wordsize) of
+        8 -> erts_debug:flat_size(P) =:= 0;
+        4 -> erts_debug:flat_size(P) > 0
+    end.

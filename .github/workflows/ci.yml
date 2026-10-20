@@ -44,6 +44,20 @@ jobs:
       - run: rebar3 eunit
       - run: rebar3 proper -n 2000
 
+  test-32bit:
+    name: OTP 29, 32-bit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Run the suite in the linux/386 erlang image
+        run: |
+          docker run --rm --platform linux/386 -v "$PWD:/src" -w /src erlang:29 sh -c '
+            erl -noshell -eval "4 = erlang:system_info(wordsize), halt()." &&
+            rebar3 eunit &&
+            rebar3 proper -n 500'
+
   format:
     name: erlfmt
     runs-on: ubuntu-24.04

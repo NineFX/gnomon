@@ -116,8 +116,7 @@ back to the system clock while the key is absent.
 - The clock runs on 64-bit emulators only. On a 32-bit emulator, such as
   the 32-bit Raspberry Pi OS, the packed value is a bignum rather than an
   immediate, so the application starts no clock, logs a notice, and every
-  read computes the date from the system clock. The test suite assumes a
-  64-bit emulator.
+  read computes the date from the system clock.
 - Years 0 through 9999. `pack/1` and `format/1` fail with `function_clause`
   outside that range.
 - The year table covers 2000 through 2199. Other years take a slower path

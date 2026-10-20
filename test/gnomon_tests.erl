@@ -75,8 +75,10 @@ pack_layout_test() ->
         gnomon:pack(0)
     ).
 
-pack_is_immediate_test_() ->
-    [?_assertEqual(0, erts_debug:flat_size(gnomon:pack(T))) || {T, _} <- vectors()] ++
+%% An immediate on 64-bit words, a bignum on 32-bit words. Year 0 packs
+%% below 2^27, so it is an immediate on both.
+pack_is_immediate_iff_64_bit_test_() ->
+    [?_assert(prop_gnomon:immediate_iff_64_bit(gnomon:pack(T))) || {T, _} <- vectors()] ++
         [?_assertEqual(0, erts_debug:flat_size(gnomon:pack(?MIN_SECONDS)))].
 
 %% The spec's stated maximum has every field at its limit. The real
@@ -100,7 +102,7 @@ read_test_() ->
     {foreach, fun() -> gnomon:clear() end, fun(_) -> gnomon:clear() end, [
         fun fallback_date/0,
         fun update_then_read/0,
-        fun update_writes_an_immediate/0,
+        fun update_writes_an_immediate_iff_64_bit/0,
         fun clear_erases/0,
         fun clear_is_idempotent/0,
         fun date_is_flat_binary/0,
@@ -124,9 +126,9 @@ update_then_read() ->
     persistent_term:put(?KEY, gnomon:pack(784111777)),
     ?assertEqual(<<"Sun, 06 Nov 1994 08:49:37 GMT">>, gnomon:date()).
 
-update_writes_an_immediate() ->
+update_writes_an_immediate_iff_64_bit() ->
     ok = gnomon:update(),
-    ?assertEqual(0, erts_debug:flat_size(persistent_term:get(?KEY))).
+    ?assert(prop_gnomon:immediate_iff_64_bit(persistent_term:get(?KEY))).
 
 clear_erases() ->
     ok = gnomon:update(),
