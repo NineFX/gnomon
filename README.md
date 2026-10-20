@@ -130,13 +130,6 @@ back to the system clock while the key is absent.
   timer early, so the stored value lags the wall clock by at most a few
   milliseconds on an unloaded system.
 
-## Supported Erlang/OTP
-
-CI runs on OTP 27, 28, and 29, the floor shared by Cowboy 2.20 and mist 6.
-Nothing in the library needs anything newer than OTP 21.3
-(`persistent_term:get/2` with a default), but older releases are not
-tested.
-
 ## Benchmarks
 
 `bench/README.md` compares `date/0` with two ETS clocks, the real
