@@ -4,7 +4,7 @@
 %% On 64-bit BEAM a small integer is an immediate, so the once-per-second
 %% update and the erase on shutdown never trigger the global garbage
 %% collection pass that persistent terms normally cause. Readers unpack the
-%% integer with `bsr' and `band' and assemble the 29-byte value from seven
+%% integer with `bsr' and `band' and assemble the 29-byte value from five
 %% fixed-width integer segments taken from literal tables, so a read is one
 %% persistent-term lookup and one small binary on the caller's heap.
 %%
@@ -25,7 +25,11 @@
 %% '''
 -module(gnomon).
 
--export([date/0, format/1, pack/1, update/0, clear/0]).
+-export([date/0, date/1, stamp/0, format/1, pack/1, update/0, clear/0]).
+-export_type([stamp/0]).
+
+%% One second packed as described above; an immediate on 64-bit words.
+-type stamp() :: non_neg_integer().
 
 -include("gnomon_tables.hrl").
 
@@ -45,12 +49,12 @@
 %% `<<"Sun, 06 Nov 1994 08:49:37 GMT">>'. This is the hot path.
 %%
 %% A binary is valid iodata and valid chardata; an API that insists on a
-%% list can take `[gnomon:date()]'. The binary is built from seven
-%% fixed-width integer segments, each a field's ASCII bytes as an integer
-%% from a literal table. The compiler knows the total size, so the result
-%% lives on the caller's heap rather than off-heap with a reference count,
-%% and each segment is written as a word rather than copied from a binary.
-%% This measured faster than an improper-list iodata form, than
+%% list can take `[gnomon:date()]'. The binary is built from five
+%% fixed-width integer segments, each one or two fields' ASCII bytes as an
+%% integer from a literal table. The compiler knows the total size, so the
+%% result lives on the caller's heap rather than off-heap with a reference
+%% count, and each segment is written as a word rather than copied from a
+%% binary. This measured faster than an improper-list iodata form, than
 %% `iolist_to_binary/1' over such a list, than a variable-size
 %% construction and than fixed-size binary segments when the library was
 %% written.
@@ -64,6 +68,19 @@ date() ->
         P -> to_binary(P)
     end.
 
+%% @doc The packed second the clock last wrote, or `undefined' when no
+%% clock is running. One persistent-term read, so a connection process can
+%% compare it on every response and cache a whole header line keyed on it;
+%% see the README.
+-spec stamp() -> stamp() | undefined.
+stamp() ->
+    persistent_term:get(?KEY, undefined).
+
+%% @doc The IMF-fixdate for a stamp from {@link stamp/0} or {@link pack/1}.
+-spec date(stamp()) -> binary().
+date(Stamp) ->
+    to_binary(Stamp).
+
 %% @doc Formats the given Unix time (seconds since the epoch, UTC) as a
 %% 29-byte IMF-fixdate binary, the same shape as {@link date/0}.
 %%
@@ -75,7 +92,7 @@ format(UnixSeconds) ->
 
 %% @doc Packs the given Unix time into the small integer this library stores
 %% in its persistent term.
--spec pack(integer()) -> non_neg_integer().
+-spec pack(integer()) -> stamp().
 pack(UnixSeconds) when
     is_integer(UnixSeconds),
     UnixSeconds >= ?MIN_SECONDS,
@@ -113,11 +130,9 @@ clear() ->
 to_binary(P) ->
     <<
         (element(((P bsr 17) band 7) + 1, ?WDAYS_INT)):40,
-        (element((P bsr 20) band 31, ?MDAYS_INT)):24,
-        (element((P bsr 25) band 15, ?MONTHS_INT)):32,
+        (element(((P bsr 20) band 511) + 1, ?DAYMONTHS_INT)):56,
         (year(P bsr 29)):40,
-        (element(((P bsr 12) band 31) + 1, ?HOURS_INT)):24,
-        (element(((P bsr 6) band 63) + 1, ?MINUTES_INT)):24,
+        (element(((P bsr 6) band 2047) + 1, ?HOURMINS_INT)):48,
         (element((P band 63) + 1, ?SECONDS_INT)):48
     >>.
 

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-29
+
+### Added
+
+- `gnomon:stamp/0` and `gnomon:date/1`, so a connection process can cache
+  a header line keyed on the packed second and rebuild it only when the
+  second changes.
+
+### Changed
+
+- `date/0` builds the binary from five table lookups instead of seven: the
+  day and month, and the hour and minute, come from combined tables indexed
+  by the packed value's own bits. Both changes follow William Thomé's
+  roadrunner work in
+  [arizona-framework/roadrunner#428](https://github.com/arizona-framework/roadrunner/issues/428).
+
+### Fixed
+
+- README: a read without a running clock costs about 70 ns, not 270.
+
 ## [1.0.0] - 2026-10-20
 
 ### Added
@@ -31,5 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   off-heap, and against an ETS clock holding an on-heap binary, with
   results in `bench/README.md`.
 
-[Unreleased]: https://github.com/ninefx/gnomon/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ninefx/gnomon/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/ninefx/gnomon/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/ninefx/gnomon/releases/tag/v1.0.0

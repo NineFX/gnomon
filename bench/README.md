@@ -41,7 +41,7 @@ does. The latest full run is pasted at the bottom of this file.
 
 ## Latest run
 
-2026-10-20, full mode, `bench/run.sh` output verbatim.
+2026-10-29, full mode, `bench/run.sh` output verbatim.
 
 ```text
 gnomon benchmark
@@ -62,58 +62,58 @@ Scaling: concurrency estimation from 1 to 10 workers in steps of 1, never stoppi
 Scaling, calls per second over all workers:
 Workers  ETS, off-heap binary (cowboy_clock)  ETS, on-heap binary  gnomon:date/0  Empty loop, the floor
 -------------------------------------------------------------------------------------------------------
-1                                 47,195,800           55,288,600     68,623,200          1,939,337,600
-2                                 22,139,600          104,898,000    121,660,600          3,330,535,600
-3                                 22,400,000          149,170,800    174,452,200          4,423,300,800
-4                                 23,849,800          188,717,600    232,542,600          6,065,808,800
-5                                 12,911,600          170,200,200    243,925,200          6,271,813,400
-6                                 12,680,200          179,313,000    269,628,000          6,494,061,800
-7                                 13,271,800          164,345,200    291,817,600          6,940,549,400
-8                                 11,438,200          184,708,400    315,068,600          7,026,371,200
-9                                 10,673,800          183,753,800    325,604,400          7,795,088,400
-10                                10,655,000          180,162,400    353,423,200          7,985,192,000
+1                                 48,089,200           54,238,000     96,673,000          1,448,220,200
+2                                 22,203,000           99,774,400    187,569,400          2,770,283,000
+3                                 22,558,600          152,217,600    261,451,800          3,980,298,800
+4                                 23,900,600          152,220,000    306,096,200          5,385,395,000
+5                                 12,486,600          139,237,200    362,066,800          5,587,597,800
+6                                 12,177,200          178,705,400    382,694,800          6,480,255,400
+7                                 12,663,800          164,832,000    434,158,800          5,654,466,000
+8                                 12,600,200          182,344,400    447,792,800          6,136,686,600
+9                                 11,350,600          169,317,200    484,600,400          6,688,509,000
+10                                11,529,000          176,628,000    501,972,600          7,127,109,400
 
 Scaling, ns per call per worker:
 Workers  ETS, off-heap binary (cowboy_clock)  ETS, on-heap binary  gnomon:date/0  Empty loop, the floor
 -------------------------------------------------------------------------------------------------------
-1                                       21.2                 18.1           14.6                    0.5
-2                                       90.3                 19.1           16.4                    0.6
-3                                      133.9                 20.1           17.2                    0.7
-4                                      167.7                 21.2           17.2                    0.7
-5                                      387.2                 29.4           20.5                    0.8
-6                                      473.2                 33.5           22.3                    0.9
-7                                      527.4                 42.6           24.0                    1.0
-8                                      699.4                 43.3           25.4                    1.1
-9                                      843.2                 49.0           27.6                    1.2
-10                                     938.5                 55.5           28.3                    1.3
+1                                       20.8                 18.4           10.3                    0.7
+2                                       90.1                 20.0           10.7                    0.7
+3                                      133.0                 19.7           11.5                    0.8
+4                                      167.4                 26.3           13.1                    0.7
+5                                      400.4                 35.9           13.8                    0.9
+6                                      492.7                 33.6           15.7                    0.9
+7                                      552.8                 42.5           16.1                    1.2
+8                                      634.9                 43.9           17.9                    1.3
+9                                      792.9                 53.2           18.6                    1.3
+10                                     867.4                 56.6           19.9                    1.4
 
 100,000 workers, erlperf report:
 Code                                 ||   Samples       Avg   StdDev    Median      P99  Iteration    Rel
-gnomon_bench:loop_empty(1000).   100000         5   7820 Ki    2.05%   7864 Ki  7998 Ki   12790 us   100%
-gnomon_bench:loop_date(1000).    100000         5    368 Ki    1.71%    368 Ki   377 Ki     272 ms     5%
-gnomon_bench:loop_ets(1000).     100000         5    174 Ki    0.97%    174 Ki   177 Ki     574 ms     2%
-gnomon_bench:loop_cowboy(1000).  100000         5     11204    0.74%     11175    11339    8927 ms     0%
+gnomon_bench:loop_empty(1000).   100000         5   7199 Ki    4.87%   7338 Ki  7598 Ki   13895 us   100%
+gnomon_bench:loop_date(1000).    100000         5    500 Ki    3.95%    503 Ki   523 Ki     200 ms     7%
+gnomon_bench:loop_ets(1000).     100000         5    171 Ki    1.48%    170 Ki   175 Ki     584 ms     2%
+gnomon_bench:loop_cowboy(1000).  100000         5     10923    1.18%     10946    11088    9157 ms     0%
 
 100,000 workers, per call (ns per call is scheduler time, 10 schedulers):
 Case                                       calls/s  ns/call per scheduler
 -------------------------------------------------------------------------
-ETS, off-heap binary (cowboy_clock)     11,204,200                  892.5
-ETS, on-heap binary                    174,378,000                   57.3
-gnomon:date/0                          367,961,400                   27.2
-Empty loop, the floor                7,820,448,200                    1.3
+ETS, off-heap binary (cowboy_clock)     10,922,800                  915.5
+ETS, on-heap binary                    171,391,000                   58.3
+gnomon:date/0                          499,856,800                   20.0
+Empty loop, the floor                7,198,518,000                    1.4
 
 Timed mode, 1 worker, erlperf report:
 Code                                ||   Samples       Avg   StdDev    Median      P99  Iteration    Rel
-gnomon_bench:loop_date(1000).        1         5    968 ms    1.33%    965 ms   986 ms   15005 ns   100%
-gnomon_bench:loop_ets(1000).         1         5    988 ms    0.93%    993 ms   997 ms   20063 ns    98%
-gnomon_bench:loop_cowboy(1000).      1         5   1002 ms    1.16%   1002 ms  1017 ms   20935 ns    97%
-gnomon_bench:loop_empty(1000).       1         5   1013 ms   31.07%    832 ms  1363 ms     709 ns    96%
+gnomon_bench:loop_cowboy(1000).      1         5    996 ms    1.29%    993 ms  1018 ms   20809 ns   100%
+gnomon_bench:loop_date(1000).        1         5    997 ms    0.80%    996 ms  1010 ms   10172 ns   100%
+gnomon_bench:loop_ets(1000).         1         5   1008 ms    1.33%   1009 ms  1020 ms   20355 ns    99%
+gnomon_bench:loop_empty(1000).       1         5   1269 ms   27.86%   1109 ms  1894 ms     634 ns    78%
 
 Timed mode, 1 worker, per call:
 Case                                 ns/call
 --------------------------------------------
-ETS, off-heap binary (cowboy_clock)     20.9
-ETS, on-heap binary                     20.1
-gnomon:date/0                           15.0
-Empty loop, the floor                    0.7
+ETS, off-heap binary (cowboy_clock)     20.8
+ETS, on-heap binary                     20.4
+gnomon:date/0                           10.2
+Empty loop, the floor                    0.6
 ```

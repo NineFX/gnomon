@@ -14,7 +14,7 @@ persistent-term lookup and one small binary on the caller's heap.
 Add the dependency to `rebar.config`:
 
 ```erlang
-{deps, [{gnomon, "1.0.0"}]}.
+{deps, [{gnomon, "1.0.1"}]}.
 ```
 
 List `gnomon` in your application's `.app.src`, so it starts before the
@@ -47,8 +47,29 @@ date wherever the header is built:
 ```
 
 When no clock is running, `date/0` computes the date from the system
-clock, which is correct but slower: about 270 ns per read on an Apple M5
-against 11 to 15.
+clock, which is correct but slower: about 70 ns per read on an Apple M5
+against 10.
+
+A connection process that writes the same header line many times a second
+can cache it keyed on `gnomon:stamp/0`, the packed second the clock last
+wrote, and rebuild it only when that changes:
+
+```erlang
+date_line() ->
+    case gnomon:stamp() of
+        undefined ->
+            <<"date: ", (gnomon:date())/binary, "\r\n">>;
+        Stamp ->
+            case get(date_line) of
+                {Stamp, Line} ->
+                    Line;
+                _ ->
+                    Line = <<"date: ", (gnomon:date(Stamp))/binary, "\r\n">>,
+                    put(date_line, {Stamp, Line}),
+                    Line
+            end
+    end.
+```
 
 `gnomon:format/1` formats any Unix time in years 0 through 9999 the same way,
 for `Last-Modified` and `Expires` style headers:
@@ -94,17 +115,17 @@ consistent; there are no torn reads across fields. The persistent term is
 read once per request and never held, so there is nothing for a global GC to
 find even if one ran.
 
-Readers unpack the integer with `bsr` and `band`. Each field indexes a
-literal tuple in `src/gnomon_tables.hrl` that holds the field's ASCII bytes,
-separator included, as an integer, and `date/0` assembles the 29-byte
-binary from those seven fixed-width integer segments. The compiler knows
-the total size, so the result is a small binary on the caller's heap, and
-each segment is written as a word.
+Readers unpack the integer with `bsr` and `band`. Each field, or adjacent
+pair of fields, indexes a literal tuple in `src/gnomon_tables.hrl` that
+holds its ASCII bytes, separator included, as an integer, and `date/0`
+assembles the 29-byte binary from those five fixed-width integer segments.
+The compiler knows the total size, so the result is a small binary on the
+caller's heap, and each segment is written as a word.
 
 Measured under load, with every scheduler busy or with 100,000 processes
-sharing them, a `date/0` read costs 21 to 28 ns of scheduler time across
-runs, against 840 to 940 ns for the ETS lookup Cowboy and mist do today.
-On one core it is 11 to 15 ns against about 20.
+sharing them, a `date/0` read costs about 20 ns of scheduler time,
+against 840 to 940 ns for the ETS lookup Cowboy and mist do today. On one
+core it is 10 ns against about 20.
 
 Finally, the two designs fail differently. An ETS table disappears with its
 owner, so a crashed clock is visible at once. A persistent term outlives its
@@ -138,13 +159,12 @@ binary, the pattern Bandit uses, from one worker up to one per scheduler,
 with 100,000 workers, and in erlperf's timed mode.
 
 On an Apple M5 with OTP 29 and the JIT, with all ten schedulers busy or
-with 100,000 workers sharing them, a `date/0` read costs 21 to 28 ns of
-scheduler time across three runs; the ETS clock holding an on-heap binary,
-Bandit's pattern, 55 to 64 ns; and `cowboy_clock`, whose binary is
-off-heap, 840 to 940 ns, because every read bumps a reference count that
-all readers share. On one core it is 11 to 15 ns against about 20 for
-either ETS clock. The results file has the full tables. Run it yourself
-with:
+with 100,000 workers sharing them, a `date/0` read costs about 20 ns of
+scheduler time; the ETS clock holding an on-heap binary, Bandit's pattern,
+55 to 64 ns across runs; and `cowboy_clock`, whose binary is off-heap,
+840 to 940 ns, because every read bumps a reference count that all readers
+share. On one core it is 10 ns against about 20 for either ETS clock. The
+results file has the full tables. Run it yourself with:
 
 ```bash
 bench/run.sh

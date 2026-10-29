@@ -165,6 +165,31 @@ assert_now(Fun) ->
     ?assert(lists:member(Got, [prop_gnomon:reference(T0), prop_gnomon:reference(T1)])).
 
 %%--------------------------------------------------------------------
+%% stamp/0 and date/1
+%%--------------------------------------------------------------------
+
+stamp_test_() ->
+    {foreach, fun() -> gnomon:clear() end, fun(_) -> gnomon:clear() end, [
+        fun stamp_is_undefined_without_a_clock/0,
+        fun stamp_is_the_stored_value/0,
+        fun date_of_a_stamp_matches_format/0
+    ]}.
+
+stamp_is_undefined_without_a_clock() ->
+    ?assertEqual(undefined, gnomon:stamp()).
+
+stamp_is_the_stored_value() ->
+    ok = gnomon:update(),
+    Stamp = gnomon:stamp(),
+    ?assert(is_integer(Stamp)),
+    ?assertEqual(persistent_term:get(?KEY), Stamp),
+    ?assertEqual(gnomon:date(), gnomon:date(Stamp)).
+
+date_of_a_stamp_matches_format() ->
+    [?assertEqual(Expected, gnomon:date(gnomon:pack(T))) || {T, Expected} <- vectors()],
+    ?assertEqual(<<"Sun, 06 Nov 1994 08:49:37 GMT">>, gnomon:date(gnomon:pack(784111777))).
+
+%%--------------------------------------------------------------------
 %% Literal tables
 %%--------------------------------------------------------------------
 
@@ -177,27 +202,18 @@ wdays_table_test() ->
         tuple_to_list(?WDAYS_INT)
     ).
 
-mdays_table_test() ->
-    ?assertEqual(ints([pad2(D, " ") || D <- lists:seq(1, 31)]), tuple_to_list(?MDAYS_INT)).
-
-months_table_test() ->
-    ?assertEqual(
-        ints([
-            "Jan ",
-            "Feb ",
-            "Mar ",
-            "Apr ",
-            "May ",
-            "Jun ",
-            "Jul ",
-            "Aug ",
-            "Sep ",
-            "Oct ",
-            "Nov ",
-            "Dec "
-        ]),
-        tuple_to_list(?MONTHS_INT)
-    ).
+%% Indexed by the packed value's month and day bits; impossible pairs are 0.
+daymonths_table_test() ->
+    Months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    Expected = [
+        case M >= 1 andalso M =< 12 andalso D >= 1 andalso D =< 31 of
+            true -> int(pad2(D, " ") ++ lists:nth(M, Months) ++ " ");
+            false -> 0
+        end
+     || I <- lists:seq(0, 511), M <- [I bsr 5], D <- [I band 31]
+    ],
+    ?assertEqual(Expected, tuple_to_list(?DAYMONTHS_INT)),
+    ?assertEqual(372, length([E || E <- Expected, E =/= 0])).
 
 years_table_test() ->
     ?assertEqual(
@@ -205,15 +221,26 @@ years_table_test() ->
         tuple_to_list(?YEARS_INT)
     ).
 
-minutes_and_hours_table_test() ->
-    ?assertEqual(ints([pad2(N, ":") || N <- lists:seq(0, 59)]), tuple_to_list(?MINUTES_INT)),
-    ?assertEqual(?MINUTES_INT, ?HOURS_INT).
+%% Indexed by the packed value's hour and minute bits; impossible pairs are 0.
+hourmins_table_test() ->
+    Expected = [
+        case H =< 23 andalso Mi =< 59 of
+            true -> int(pad2(H, ":") ++ pad2(Mi, ":"));
+            false -> 0
+        end
+     || I <- lists:seq(0, 2047), H <- [I bsr 6], Mi <- [I band 63]
+    ],
+    ?assertEqual(Expected, tuple_to_list(?HOURMINS_INT)),
+    ?assertEqual(1440, length([E || E <- Expected, E =/= 0])).
 
 seconds_table_test() ->
     ?assertEqual(ints([pad2(N, " GMT") || N <- lists:seq(0, 59)]), tuple_to_list(?SECONDS_INT)).
 
 ints(Strings) ->
-    [binary:decode_unsigned(list_to_binary(S)) || S <- Strings].
+    [int(S) || S <- Strings].
+
+int(String) ->
+    binary:decode_unsigned(list_to_binary(String)).
 
 pad2(N, Suffix) ->
     lists:flatten(io_lib:format("~2..0B~s", [N, Suffix])).

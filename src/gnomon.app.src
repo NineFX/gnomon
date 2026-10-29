@@ -1,6 +1,6 @@
 {application, gnomon, [
     {description, "HTTP Date header value served from a persistent term instead of an ETS table"},
-    {vsn, "1.0.0"},
+    {vsn, "1.0.1"},
     {mod, {gnomon_app, []}},
     {registered, [gnomon_sup, gnomon_clock]},
     {applications, [

@@ -40,6 +40,13 @@ prop_format_matches_reference() ->
         gnomon:format(T) =:= reference(T)
     ).
 
+prop_date_of_stamp_matches_reference() ->
+    ?FORALL(
+        T,
+        unix_seconds(),
+        gnomon:date(gnomon:pack(T)) =:= reference(T)
+    ).
+
 %% cowlib is a test-only dependency; cow_date:rfc7231/1 is what Cowboy
 %% itself uses to format the Date header.
 prop_format_matches_cowlib() ->
